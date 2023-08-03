@@ -35,6 +35,7 @@
 			import { DRACOLoader } from 'three/addons/loaders/DRACOLoader.js';
 			import { KeyDisplay } from './utils.js';
 			import { CharacterControls } from './characterControls.js';
+			import { Water } from 'three/addons/objects/Water.js';
 			// SCENE
 			const scene = new THREE.Scene();
 			//scene.background = new THREE.Color(0xa8def0);
@@ -63,7 +64,7 @@
 			orbitControls.update();
 
 			// LIGHTS
-			//light()
+			light()
 			
 			// FLOOR
 			//generateFloor()
@@ -90,7 +91,7 @@
 			const loader_room = new GLTFLoader()
 							.setPath( 'models/gltf/' )
 							.setDRACOLoader( new DRACOLoader().setDecoderPath( 'jsm/libs/draco/gltf/' ) )
-							.load( 'model_16metres_lights.glb', function ( gltf ) {
+							.load( 'model_16metres.glb', function ( gltf ) {
 
 								const mixer = new THREE.AnimationMixer( gltf.scene );
 								mixer.clipAction( gltf.animations[ 0 ] ).play();
@@ -128,7 +129,7 @@
 
 			function light() {
 				//scene.add(new THREE.AmbientLight(0xffffff, 0.7))
-				/**
+				
 				const dirLight = new THREE.DirectionalLight(0xffffff, 1)
 				dirLight.position.set(- 60, 100, - 10);
 				dirLight.castShadow = true;
@@ -141,7 +142,7 @@
 				dirLight.shadow.mapSize.width = 4096;
 				dirLight.shadow.mapSize.height = 4096;
 				scene.add(dirLight);
-				**/
+				
 				// scene.add( new THREE.CameraHelper(dirLight.shadow.camera))
 			}
 
@@ -190,6 +191,7 @@
 				keyDisplayQueue.updatePosition()
 			}
 			window.addEventListener('resize', onWindowResize);
+			
 		</script>
 
 	</body>
