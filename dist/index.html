@@ -8,6 +8,9 @@
 	</head>
 
 	<body>
+		<video id="video" playsinline webkit-playinline muted autoplay loop width="1500" height="1500" style="display:none">
+			<source src="textures/video_texture_03.mp4" type='video/mp4; codecs="avc1.42E01E, mp4a.40.2"'>
+		</video>
 		<!-- Import maps polyfill -->
 		<!-- Remove this when import maps will be widely supported -->
 		<script async src="https://unpkg.com/es-module-shims@1.6.3/dist/es-module-shims.js"></script>
@@ -37,7 +40,7 @@
 			import { CharacterControls } from './characterControls.js';
 			import { Water } from 'three/addons/objects/Water.js';
 			import { Sky } from 'three/addons/objects/Sky.js';
-			let water;
+			var water, video, videoImage, videoImageContext, videoTexture;
 			const scene = new THREE.Scene();
 			//scene.background = new THREE.Color(0xa8def0);
 
@@ -65,6 +68,19 @@
 
 			water.position.y = -3;
 			scene.add( water );
+
+			// create the video element
+			video = document.getElementById( 'video' );
+				
+			videoTexture = new THREE.Texture( video );
+			videoTexture.minFilter = THREE.LinearFilter;
+			videoTexture.magFilter = THREE.LinearFilter;
+			videoTexture.flipY = false;
+			var movieMaterial = new THREE.MeshPhongMaterial( { map: videoTexture, emissiveMap: videoTexture, emissiveIntensity: 0.8, emissive: 0xffffff, toneMapped: false, side:THREE.DoubleSide} );
+			// Set the opacity of the material
+			movieMaterial.opacity = 1.0; // Adjust the value as needed (0.0 to 1.0)
+			// Enable transparency for the material
+			movieMaterial.transparent = true;
 
 			const waterUniforms = water.material.uniforms;
 			const gui = new GUI();
@@ -125,9 +141,17 @@
 							.setDRACOLoader( new DRACOLoader().setDecoderPath( 'jsm/libs/draco/gltf/' ) )
 							.load( 'model_16metres.glb', function ( gltf ) {
 
+								const screenObject = gltf.scene.getObjectByName('video_plane_wall_A');
+								screenObject.material = movieMaterial;
+
+								const screenObject1 = gltf.scene.getObjectByName('video_plane_wall_B');
+								screenObject1.material = movieMaterial;
+
+								
 								const mixer = new THREE.AnimationMixer( gltf.scene );
 								mixer.clipAction( gltf.animations[ 0 ] ).play();
 								scene.add( gltf.scene );
+
 
 							} );
 			
@@ -157,7 +181,15 @@
 				orbitControls.update()
 				const time = performance.now() * 0.001;
 				water.material.uniforms[ 'time' ].value += 1.0 / 60.0;
+
+				if ( video.readyState === video.HAVE_ENOUGH_DATA ) 
+				{
+					if ( videoTexture ) 
+						videoTexture.needsUpdate = true;
+				}
+
 				renderer.render( scene, camera );
+				update()
 				requestAnimationFrame(animate);
 			}
 
@@ -223,6 +255,25 @@
 				camera.updateProjectionMatrix();
 				renderer.setSize(window.innerWidth, window.innerHeight);
 				keyDisplayQueue.updatePosition()
+			}
+
+			function update()
+			{
+				video.play();
+				/**
+				document.onkeydown = function (e) {
+					if(e.keyCode === 80) {
+						video.play();
+					} else if (e.keyCode === 32) {
+						video.pause();	
+					} else if (e.keyCode === 83) {
+						 video.pause();
+						 video.currenTime = 0;
+					} else if (e.keyCode === 2) {
+						video.currenTime = 0;
+					}
+				};
+				**/
 			}
 			window.addEventListener('resize', onWindowResize);
 			
