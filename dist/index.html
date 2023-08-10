@@ -8,6 +8,7 @@
 	</head>
 
 	<body>
+		<div style="color: blue; font-size: 50px; font-weight: 800; position: absolute; top: 900px; left: 60px;">P: free camera</div>
 		<video id="video" playsinline webkit-playinline muted autoplay loop width="1500" height="1500" style="display:none">
 			<source src="textures/video_texture_03.mp4" type='video/mp4; codecs="avc1.42E01E, mp4a.40.2"'>
 		</video>
@@ -40,10 +41,11 @@
 			import { CharacterControls } from './characterControls.js';
 			import { Water } from 'three/addons/objects/Water.js';
 			import { Sky } from 'three/addons/objects/Sky.js';
-			var water, video, videoImage, videoImageContext, videoTexture;
+			import { FlyControls } from 'three/addons/controls/FlyControls.js';
+			var water, video, videoImage, videoImageContext, videoTexture, freeCamra;
 			const scene = new THREE.Scene();
 			//scene.background = new THREE.Color(0xa8def0);
-
+			freeCamra = false
 			// Water
 
 			const waterGeometry = new THREE.PlaneGeometry( 10000, 10000 );
@@ -105,15 +107,55 @@
 			// CONTROLS
 			const orbitControls = new OrbitControls(camera, renderer.domElement);
 			orbitControls.enableDamping = true
-			orbitControls.minDistance = 5
-			orbitControls.maxDistance = 1000
+			orbitControls.minDistance = 2
+			orbitControls.maxDistance = 4
 			orbitControls.enablePan = false
-			orbitControls.maxPolarAngle = Math.PI / 2 - 0.05
-			orbitControls.update();
+			orbitControls.maxPolarAngle = Math.PI /1.7
+			//orbitControls.update();
 
+			const flyControls = new FlyControls(camera, renderer.domElement)
+			flyControls.movementSpeed = 20;
+			flyControls.rollSpeed =	0.1;
+			flyControls.autoForward = false;
+			flyControls.dragToLook =  false;
+			//flyControls.update(0.05) 
 			// LIGHTS
-			light()
-			
+			//light()
+			 // Load and parse the JSON data
+			// Load and parse the data from the text file
+			// Load and parse the JSON-like data from the text file
+			fetch('renault_night_lights.txt')
+			.then(response => response.json())
+			.then(jsonData => {
+				// Add directional light
+				const directionalLightData = jsonData["directional-light"][0];
+				const directionalColor = new THREE.Color(directionalLightData.color);
+				const directionalIntensity = parseFloat(directionalLightData.intensity);
+				const directionalPosition = new THREE.Vector3(
+				parseFloat(directionalLightData.position.x),
+				parseFloat(directionalLightData.position.y),
+				parseFloat(directionalLightData.position.z)
+				);
+				const directionalLight = new THREE.DirectionalLight(directionalColor, directionalIntensity);
+				directionalLight.position.copy(directionalPosition);
+				scene.add(directionalLight);
+
+				// Add point lights
+				const pointLightsData = jsonData["point-lights"];
+				pointLightsData.forEach(pointLightData => {
+				const color = new THREE.Color(pointLightData.color);
+				const intensity = pointLightData.intensity;
+				const position = new THREE.Vector3(
+					pointLightData.position.x,
+					pointLightData.position.y,
+					pointLightData.position.z
+				);
+				const pointLight = new THREE.PointLight(color, intensity);
+				pointLight.position.copy(position);
+				scene.add(pointLight);
+				});
+			})
+			.catch(error => console.error('Error loading data:', error));
 			// FLOOR
 			//generateFloor()
 			// MODEL WITH ANIMATIONS
@@ -165,6 +207,9 @@
 				} else {
 					keysPressed[event.key.toLowerCase()] = true;
 				}
+				if (event.key === "p" || event.key === "P" && characterControls) {
+					characterControls.freeCamera();
+				}
 			}, false);
 			document.addEventListener('keyup', (event) => {
 				keyDisplayQueue.up(event.key);
@@ -175,10 +220,15 @@
 			const clock = new THREE.Clock();
 			function animate() {
 				let mixerUpdateDelta = clock.getDelta();
-				if (characterControls) {
+				
+				if(characterControls && characterControls.getBindCamera()) {
 					characterControls.update(mixerUpdateDelta, keysPressed);
+					orbitControls.update()
 				}
-				orbitControls.update()
+
+				if(characterControls && !characterControls.getBindCamera()) {
+					flyControls.update(0.05);
+				}
 				const time = performance.now() * 0.001;
 				water.material.uniforms[ 'time' ].value += 1.0 / 60.0;
 
