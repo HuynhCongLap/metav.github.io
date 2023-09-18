@@ -10,7 +10,7 @@ export class CharacterControls {
         this.orbitControl = orbitControl;
         this.camera = camera;
         this.fadeDuration = 0.2;
-        this.runVelocity = 5;
+        this.runVelocity = 20;
         this.walkVelocity = 2;
         this.toggleRun = true;
         this.currentAction = currentAction;
