@@ -2,7 +2,7 @@
 "directional-light": [
  {
   "color": "#86BBFD",
-    "intensity": 2.20,
+    "intensity": 5.0,
     "position": {
       "x": 8.350,
       "y": 11.004,

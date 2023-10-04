@@ -23,7 +23,7 @@ export class KeyDisplay {
 
         this.map.forEach((v, k) => {
             v.style.color = 'blue';
-            v.style.fontSize = '50px';
+            v.style.fontSize = '1px';
             v.style.fontWeight = '800';
             v.style.position = 'absolute';
             v.textContent = k;

@@ -110,7 +110,7 @@
 			orbitControls.minDistance = 2
 			orbitControls.maxDistance = 4
 			orbitControls.enablePan = false
-			orbitControls.maxPolarAngle = Math.PI /1.7
+			orbitControls.maxPolarAngle = Math.PI /1.0
 			//orbitControls.update();
 
 			const flyControls = new FlyControls(camera, renderer.domElement)
@@ -186,10 +186,9 @@
 								const screenObject = gltf.scene.getObjectByName('video_plane_wall_A');
 								screenObject.material = movieMaterial;
 
-								const screenObject1 = gltf.scene.getObjectByName('video_plane_wall_B');
-								screenObject1.material = movieMaterial;
+								const portal = gltf.scene.getObjectByName('video_plane_portal');
+								portal.material = movieMaterial;
 
-								
 								const mixer = new THREE.AnimationMixer( gltf.scene );
 								mixer.clipAction( gltf.animations[ 0 ] ).play();
 								scene.add( gltf.scene );
