@@ -1,0 +1,31 @@
+- Open a terminal : npx serve .
+- Go to browser: http://localhost:3000/dist/
+
+The scene will be load to the browser
+
+
+To customize the scene, we have 3 things can change in the scene:
+
+1: Env map
+ place your .png or .exr files in custom/textures
+ then indicate their names in custom_env.txt by replace 2 lines in the text file
+
+ -> first line must be name of EXR file
+ -> second line must be name of png file
+
+And the files must exist in the custom/textures folder
+
+2: room model
+ place you glb file in custom/models
+ then indicate their names in custom_scene.txt by replace the only line in the text file
+
+the files must exist in the custom/models folder
+
+3: lighting 
+open the custom_lights.txt
+just adjust the parameters of the files to change directional light and points light in the scene
+You can add more lights in the file
+ Note: There is one Ambient Light in the scene -> to adjust its intensity 
+
+ open index.html -> find line 96  -> scene.add(new THREE.AmbientLight(0xffffff, 1.0))
+ 1.0 is the intensity -> change that to adjust the intensity of the ambient light in the scene

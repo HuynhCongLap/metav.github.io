@@ -1,0 +1,114 @@
+{
+"directional-light": [
+ {
+  "color": "#86BBFD",
+    "intensity": 6.0,
+    "position": {
+      "x": 8.350,
+      "y": 11.004,
+      "z": -2.68
+    }
+ }
+],
+"point-lights": [
+  {
+    "color": "#FFFFFF",
+    "intensity": 0,
+    "position": {
+      "x": 8,
+      "y": 10,
+      "z": 37.21
+    }
+  },
+  {
+    "color": "#FFFFFF",
+    "intensity": 0,
+    "position": {
+      "x": 21.91,
+      "y": 10.08,
+      "z": 12.04
+    }
+  },
+  {
+    "color": "#FFFFFF",
+    "intensity": 0,
+    "position": {
+      "x": 23.2,
+      "y": 10,
+      "z": -10.66
+    }
+  },
+  {
+    "color": "#FFFFFF",
+    "intensity": 0,
+    "position": {
+      "x": 9.36,
+      "y": 10.19,
+      "z": -35.65
+    }
+  },
+  {
+    "color": "#FFFFFF",
+    "intensity": 0,
+    "position": {
+      "x": -8.59,
+      "y": 10.192,
+      "z": -34.975
+    }
+  },
+  {
+    "color": "#FFFFFF",
+    "intensity": 0,
+    "position": {
+      "x": -22.46,
+      "y": 10.2,
+      "z": -10.3
+    }
+  },
+  {
+    "color": "#3077FA",
+    "intensity": 0,
+    "position": {
+      "x": -22,
+      "y": 7.5,
+      "z": 29
+    }
+  },
+  {
+    "color": "#3077FA",
+    "intensity": 0,
+    "position": {
+      "x": 10.07,
+      "y": 5.06,
+      "z": 22.52
+    }
+  },
+  {
+    "color": "#3077FA",
+    "intensity": 0,
+    "position": {
+      "x": 24.27,
+      "y": 5.25,
+      "z": -25.85
+    }
+  },
+  {
+    "color": "#3077FA",
+    "intensity": 0,
+    "position": {
+      "x": -6.42,
+      "y": 5.25,
+      "z": -18.56
+    }
+  },
+  {
+    "color": "#3077FA",
+    "intensity": 0,
+    "position": {
+      "x": -10.75,
+      "y": 5.25,
+      "z": 9.68
+    }
+  }
+]
+}
