@@ -1,1 +1,1 @@
-bagroom03.glb
+bag_room_20_with_bags_testshadow.glb

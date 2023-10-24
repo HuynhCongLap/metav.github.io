@@ -8,7 +8,6 @@
 	</head>
 
 	<body>
-		<div style="color: blue; font-size: 50px; font-weight: 800; position: absolute; top: 900px; left: 60px;">P: free camera</div>
 		<video id="video" playsinline webkit-playinline muted autoplay loop width="1500" height="1500" style="display:none">
 			<source src="textures/video_texture_03.mp4" type='video/mp4; codecs="avc1.42E01E, mp4a.40.2"'>
 		</video>
@@ -44,24 +43,56 @@
 			import { FlyControls } from 'three/addons/controls/FlyControls.js';
 			import { EXRLoader } from 'three/addons/loaders/EXRLoader.js';
 
-			var water, video, videoImage, videoImageContext, videoTexture, freeCamra;
+			var water, video, videoImage, videoImageContext, videoTexture;
+			var exr_file, png_file;
 			var pngCubeRenderTarget, exrCubeRenderTarget;
 			var pngBackground, exrBackground;
+			var characterControls, character;
+			var customScene;
 			const scene = new THREE.Scene();
-			//scene.background = new THREE.Color(0xa8def0);
-			freeCamra = false
+			const clock = new THREE.Clock();
 
+			const keysPressed = {};
+			// GUI
 			const gui = new GUI();
 			const params = {
 				envMap: 'EXR',
 				exposure: 1.0,
 				debug: false,
+				characterShadow: false,
+				sceneShadow: false
 			};
 
-			gui.add( params, 'envMap', [ 'EXR', 'PNG' ] );
-			gui.add( params, 'exposure', 0, 2, 0.01 );
-			gui.add( params, 'debug', false );
-			gui.open();
+
+			// Create a folder for shadow controls
+			const shadowFolder = gui.addFolder('Shadow Controls');
+
+			// Add a control to toggle shadow casting
+			shadowFolder.add(params, 'characterShadow').onChange((value) => {
+				character.traverse((child) => {
+					if (child instanceof THREE.Mesh) {
+					child.castShadow = value;
+					}
+				});
+			});
+
+			// Add a control to toggle shadow casting
+			shadowFolder.add(params, 'sceneShadow').onChange((value) => {
+				customScene.traverse((child) => {
+					if (child instanceof THREE.Mesh) {
+						if (child.name.includes('_wsd')) {
+							child.castShadow = value;
+						}
+					}
+				});
+			});
+
+			const controlFolder = gui.addFolder('Controls');
+			controlFolder.add( params, 'envMap', [ 'EXR', 'PNG' ] );
+			controlFolder.add( params, 'exposure', 0, 2, 0.01 );
+			controlFolder.add( params, 'debug', false );
+			controlFolder.open();
+
 			// CAMERA
 			const camera = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 0.1, 1000);
 			camera.position.y = 5;
@@ -73,6 +104,8 @@
 			renderer.setSize(window.innerWidth, window.innerHeight);
 			renderer.setPixelRatio(window.devicePixelRatio);
 			renderer.shadowMap.enabled = true
+			renderer.shadowMap.type = THREE.PCFSoftShadowMap; // Choose a shadow type that suits your needs
+			renderer.shadowMap.autoUpdate = true;
 			renderer.physicallyCorrectLights = true
 			renderer.toneMapping = THREE.ACESFilmicToneMapping;		
 			document.body.appendChild( renderer.domElement );
@@ -84,170 +117,36 @@
 			orbitControls.maxDistance = 4
 			orbitControls.enablePan = false
 			orbitControls.maxPolarAngle = Math.PI /1.0
-			//orbitControls.update();
 
-			THREE.DefaultLoadingManager.onLoad = function ( ) {
-
-			pmremGenerator.dispose();
-
-			};
-				
-			var exr_file, png_file;
-			scene.add(new THREE.AmbientLight(0xffffff, 0))
-			// Use the fetch API to load the text file
-			fetch('custom/custom_env.txt')
-			.then(response => response.text())
-			.then(data => {
-				// Split the text into lines
-				const lines = data.split('\n');
-
-				// Assign the lines to variables
-				if (lines.length >= 2) {
-					exr_file = 'custom/textures/' + lines[0].trim(); // Join with prefix for exr_file
-      				png_file = 'custom/textures/' + lines[1].trim(); // Join with prefix for png_file
-					  new EXRLoader().load( exr_file, function ( texture ) {
-
-						texture.mapping = THREE.EquirectangularReflectionMapping;
-
-						exrCubeRenderTarget = pmremGenerator.fromEquirectangular( texture );
-						exrBackground = texture;
-
-						} );
-
-						new THREE.TextureLoader().load( png_file, function ( texture ) {
-
-						texture.mapping = THREE.EquirectangularReflectionMapping;
-						texture.colorSpace = THREE.SRGBColorSpace;
-
-						pngCubeRenderTarget = pmremGenerator.fromEquirectangular( texture );
-						pngBackground = texture;
-
-						} );
-				// Now you can use exr_file and png_file in your Three.js scene
-				
-				} else {
-				console.error('Text file does not contain enough lines.');
-				}
-			})
-			.catch(error => {
-				console.error('Error loading the text file:', error);
-			});
-			
 			const pmremGenerator = new THREE.PMREMGenerator( renderer );
 			pmremGenerator.compileEquirectangularShader();
+			THREE.DefaultLoadingManager.onLoad = function ( ) {
 
-			// Load and parse the JSON-like data from the text file
-			fetch('custom/custom_lights.txt')
-			.then(response => response.json())
-			.then(jsonData => {
-				// Add directional light
-				const directionalLightData = jsonData["directional-light"][0];
-				const directionalColor = new THREE.Color(directionalLightData.color);
-				const directionalIntensity = parseFloat(directionalLightData.intensity);
-				const directionalPosition = new THREE.Vector3(
-				parseFloat(directionalLightData.position.x),
-				parseFloat(directionalLightData.position.y),
-				parseFloat(directionalLightData.position.z)
-				);
-				const directionalLight = new THREE.DirectionalLight(directionalColor, directionalIntensity);
-				directionalLight.position.copy(directionalPosition);
-				scene.add(directionalLight);
+				pmremGenerator.dispose();
 
-				// Add point lights
-				const pointLightsData = jsonData["point-lights"];
-				pointLightsData.forEach(pointLightData => {
-				const color = new THREE.Color(pointLightData.color);
-				const intensity = pointLightData.intensity;
-				const position = new THREE.Vector3(
-					pointLightData.position.x,
-					pointLightData.position.y,
-					pointLightData.position.z
-				);
-				const pointLight = new THREE.PointLight(color, intensity);
-				pointLight.position.copy(position);
-				scene.add(pointLight);
-				});
-			})
-			.catch(error => console.error('Error loading data:', error));
-			//generateFloor()
-			// MODEL WITH ANIMATIONS
-			var characterControls;
-			const loader = new GLTFLoader();
-			loader.load('custom/avatar_model/woman.glb', function (gltf) {
-				const model = gltf.scene;
-				model.traverse(function (object) {
-					if (object.isMesh) object.castShadow = true;
-				});
-				scene.add(model);
+			};
+	
+			// LIGHT 
+			light()
 
-				const gltfAnimations = gltf.animations;
-				const mixer = new THREE.AnimationMixer(model);
-				const animationsMap = new Map();
-				gltfAnimations.filter(a => a.name != 'TPose').forEach(a => {
-					animationsMap.set(a.name, mixer.clipAction(a));
-				});
+			// EVN LOADER
+			envLoader()
 
-				characterControls = new CharacterControls(model, mixer, animationsMap, orbitControls, camera, 'Idle');
-			});
+			// LIGHT LOADER
+			lightLoader()			
 
+			// CHARACTER LOADER
+			characterLoader()
 			
+			// SCENE LOADER
+			sceneLoader()
 
-			// Use the fetch API to load the text file
-			fetch('custom/custom_scene.txt')
-			.then(response => response.text())
-			.then(data => {
-				// Trim any leading/trailing whitespace from the text file content
-				const glbFileName = data.trim();
-				// Load the GLB model
-				const loader_room = new GLTFLoader()
-							.setPath( 'custom/models/' )
-							.setDRACOLoader( new DRACOLoader().setDecoderPath( 'jsm/libs/draco/gltf/' ) )
-							.load( glbFileName, function ( gltf ) {
-								const model = gltf.scene;
-								// Add the model to the scene
-								scene.add(model);
-								// Get the animations
-								const animations = gltf.animations;
-								// Create an animation mixer
-								const mixer = new THREE.AnimationMixer(model);
-								// Add animations to the mixer
-								animations.forEach((clip) => {
-									mixer.clipAction(clip).play();
-								});
-								// Render the scene
-								const animate = () => {
-									requestAnimationFrame(animate);
-									mixer.update(0.01); // You can adjust the animation speed here
-									renderer.render(scene, camera);
-								};
-								animate();
-							} );
-			})
-			.catch(error => {
-				console.error('Error loading the text file:', error);
-			});
-			
 			// CONTROL KEYS
-			const keysPressed = {};
-			const keyDisplayQueue = new KeyDisplay();
-			document.addEventListener('keydown', (event) => {
-				keyDisplayQueue.down(event.key);
-				if (event.shiftKey && characterControls) {
-					characterControls.switchRunToggle();
-				} else {
-					keysPressed[event.key.toLowerCase()] = true;
-				}
-				if (event.key === "p" || event.key === "P" && characterControls) {
-					characterControls.freeCamera();
-				}
-			}, false);
-			document.addEventListener('keyup', (event) => {
-				keyDisplayQueue.up(event.key);
-				keysPressed[event.key.toLowerCase()] = false;
-			}, false);
+			controlKeys()
 
 
-			const clock = new THREE.Clock();
+			animate();
+
 			function animate() {
 				let mixerUpdateDelta = clock.getDelta();
 				
@@ -268,30 +167,13 @@
 			}
 
 			function light() {
-				//scene.add(new THREE.AmbientLight(0xffffff, 0.7))
-				
-				const dirLight = new THREE.DirectionalLight(0xffffff, 2)
-				dirLight.position.set(- 60, 100, - 10);
-				dirLight.castShadow = true;
-				dirLight.shadow.camera.top = 50;
-				dirLight.shadow.camera.bottom = - 50;
-				dirLight.shadow.camera.left = - 50;
-				dirLight.shadow.camera.right = 50;
-				dirLight.shadow.camera.near = 0.1;
-				dirLight.shadow.camera.far = 200;
-				dirLight.shadow.mapSize.width = 4096;
-				dirLight.shadow.mapSize.height = 4096;
-				scene.add(dirLight);
-				
-				// scene.add( new THREE.CameraHelper(dirLight.shadow.camera))
+				scene.add(new THREE.AmbientLight(0xffffff, 1.0))
+				//const light = new THREE.DirectionalLight(0xffffff, 1);
+				//light.position.set(0, 20, 0); // Adjust the light position
+				//light.castShadow = true;
+				//scene.add(light);
 			}
 
-			function wrapAndRepeatTexture (texture) {
-				texture.wrapS = texture.wrapT = THREE.RepeatWrapping
-				texture.repeat.x = texture.repeat.y = 10
-			}
-
-			animate();
 			// RESIZE HANDLER
 			function onWindowResize() {
 				camera.aspect = window.innerWidth / window.innerHeight;
@@ -318,8 +200,178 @@
 				renderer.toneMappingExposure = params.exposure;
 
 			}
+
+			function envLoader()
+			{
+				// Use the fetch API to load the text file
+				fetch('custom/custom_env.txt')
+				.then(response => response.text())
+				.then(data => {
+					// Split the text into lines
+					const lines = data.split('\n');
+
+					// Assign the lines to variables
+					if (lines.length >= 2) {
+						exr_file = 'custom/textures/' + lines[0].trim(); // Join with prefix for exr_file
+						png_file = 'custom/textures/' + lines[1].trim(); // Join with prefix for png_file
+						new EXRLoader().load( exr_file, function ( texture ) {
+
+							texture.mapping = THREE.EquirectangularReflectionMapping;
+
+							exrCubeRenderTarget = pmremGenerator.fromEquirectangular( texture );
+							exrBackground = texture;
+
+							} );
+
+							new THREE.TextureLoader().load( png_file, function ( texture ) {
+
+							texture.mapping = THREE.EquirectangularReflectionMapping;
+							texture.colorSpace = THREE.SRGBColorSpace;
+
+							pngCubeRenderTarget = pmremGenerator.fromEquirectangular( texture );
+							pngBackground = texture;
+
+							} );
+					// Now you can use exr_file and png_file in your Three.js scene
+					
+					} else {
+					console.error('Text file does not contain enough lines.');
+					}
+				})
+				.catch(error => {
+					console.error('Error loading the text file:', error);
+				});
+			}
+
+			function lightLoader()
+			{
+					// Load and parse the JSON-like data from the text file
+				fetch('custom/custom_lights.txt')
+				.then(response => response.json())
+				.then(jsonData => {
+					// Add directional light
+					const directionalLightData = jsonData["directional-light"][0];
+					const directionalColor = new THREE.Color(directionalLightData.color);
+					const directionalIntensity = parseFloat(directionalLightData.intensity);
+					const directionalPosition = new THREE.Vector3(
+					parseFloat(directionalLightData.position.x),
+					parseFloat(directionalLightData.position.y),
+					parseFloat(directionalLightData.position.z)
+					);
+					const directionalLight = new THREE.DirectionalLight(directionalColor, directionalIntensity);
+					directionalLight.castShadow = true;
+					const d = 10;
+
+					directionalLight.shadow.camera.left = - d;
+					directionalLight.shadow.camera.right = d;
+					directionalLight.shadow.camera.top = d;
+					directionalLight.shadow.camera.bottom = - d;
+					directionalLight.position.copy(directionalPosition);
+					scene.add(directionalLight);
+
+					// Add point lights
+					const pointLightsData = jsonData["point-lights"];
+					pointLightsData.forEach(pointLightData => {
+					const color = new THREE.Color(pointLightData.color);
+					const intensity = pointLightData.intensity;
+					const position = new THREE.Vector3(
+						pointLightData.position.x,
+						pointLightData.position.y,
+						pointLightData.position.z
+					);
+					const pointLight = new THREE.PointLight(color, intensity);
+					pointLight.position.copy(position);
+					scene.add(pointLight);
+					});
+				})
+				.catch(error => console.error('Error loading data:', error));
+			}
+
+			function characterLoader()
+			{
+				// MODEL WITH ANIMATIONS
+				const loader = new GLTFLoader();
+				loader.load('custom/avatar_model/woman.glb', function (gltf) {
+					character = gltf.scene;
+					scene.add(character);
+
+					const gltfAnimations = gltf.animations;
+					const mixer = new THREE.AnimationMixer(character);
+					const animationsMap = new Map();
+					gltfAnimations.filter(a => a.name != 'TPose').forEach(a => {
+						animationsMap.set(a.name, mixer.clipAction(a));
+					});
+
+					characterControls = new CharacterControls(character, mixer, animationsMap, orbitControls, camera, 'Idle');
+				});
+			}
+
+			function sceneLoader()
+			{
+				// Use the fetch API to load the text file
+				fetch('custom/custom_scene.txt')
+				.then(response => response.text())
+				.then(data => {
+					// Trim any leading/trailing whitespace from the text file content
+					const glbFileName = data.trim();
+					// Load the GLB model
+					const loader_room = new GLTFLoader()
+								.setPath( 'custom/models/' )
+								.setDRACOLoader( new DRACOLoader().setDecoderPath( 'jsm/libs/draco/gltf/' ) )
+								.load( glbFileName, function ( gltf ) {
+									customScene = gltf.scene;
+									customScene.traverse(function (object) {
+										if (object.isMesh) 
+										{
+											object.receiveShadow = true;
+										}
+									});
+									// Add the model to the scene
+									scene.add(customScene);
+									// Get the animations
+									const animations = gltf.animations;
+									// Create an animation mixer
+									const mixer = new THREE.AnimationMixer(customScene);
+									// Add animations to the mixer
+									animations.forEach((clip) => {
+										mixer.clipAction(clip).play();
+									});
+									// Render the scene
+									const animate = () => {
+										requestAnimationFrame(animate);
+										mixer.update(0.01); // You can adjust the animation speed here
+										renderer.render(scene, camera);
+									};
+									animate();
+								} );
+				})
+				.catch(error => {
+					console.error('Error loading the text file:', error);
+				});
+			
+			}
 			window.addEventListener('resize', onWindowResize);
 			
+			function controlKeys()
+			{
+				const keyDisplayQueue = new KeyDisplay();
+				document.addEventListener('keydown', (event) => {
+					keyDisplayQueue.down(event.key);
+					if (event.shiftKey && characterControls) {
+						characterControls.switchRunToggle();
+					} else {
+						keysPressed[event.key.toLowerCase()] = true;
+					}
+					if (event.key === "p" || event.key === "P" && characterControls) {
+						characterControls.freeCamera();
+					}
+				}, false);
+
+				document.addEventListener('keyup', (event) => {
+					keyDisplayQueue.up(event.key);
+					keysPressed[event.key.toLowerCase()] = false;
+				}, false);
+			}
 		</script>
 
 	</body>
