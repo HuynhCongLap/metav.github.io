@@ -93,7 +93,7 @@
 			};
 				
 			var exr_file, png_file;
-			scene.add(new THREE.AmbientLight(0xffffff, 1.0))
+			scene.add(new THREE.AmbientLight(0xffffff, 0))
 			// Use the fetch API to load the text file
 			fetch('custom/custom_env.txt')
 			.then(response => response.text())
