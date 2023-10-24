@@ -203,9 +203,24 @@
 							.setPath( 'custom/models/' )
 							.setDRACOLoader( new DRACOLoader().setDecoderPath( 'jsm/libs/draco/gltf/' ) )
 							.load( glbFileName, function ( gltf ) {
-								scene.add( gltf.scene );
-
-
+								const model = gltf.scene;
+								// Add the model to the scene
+								scene.add(model);
+								// Get the animations
+								const animations = gltf.animations;
+								// Create an animation mixer
+								const mixer = new THREE.AnimationMixer(model);
+								// Add animations to the mixer
+								animations.forEach((clip) => {
+									mixer.clipAction(clip).play();
+								});
+								// Render the scene
+								const animate = () => {
+									requestAnimationFrame(animate);
+									mixer.update(0.01); // You can adjust the animation speed here
+									renderer.render(scene, camera);
+								};
+								animate();
 							} );
 			})
 			.catch(error => {
