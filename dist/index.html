@@ -48,7 +48,7 @@
 			var pngCubeRenderTarget, exrCubeRenderTarget;
 			var pngBackground, exrBackground;
 			var characterControls, character;
-			var customScene;
+			var customScene, sceneMixer;
 			const scene = new THREE.Scene();
 			const clock = new THREE.Clock();
 
@@ -60,7 +60,8 @@
 				exposure: 1.0,
 				debug: false,
 				characterShadow: false,
-				sceneShadow: false
+				sceneShadow: false,
+				animationSpeed: 1.0
 			};
 
 
@@ -78,19 +79,30 @@
 
 			// Add a control to toggle shadow casting
 			shadowFolder.add(params, 'sceneShadow').onChange((value) => {
-				customScene.traverse((child) => {
-					if (child instanceof THREE.Mesh) {
-						if (child.name.includes('_wsd')) {
-							child.castShadow = value;
+				// Function to recursively enable shadow casting
+				const enableShadows = (object) => {
+					if (object instanceof THREE.Mesh) {
+						if (object.name.includes('_wsd')) {
+							object.castShadow = value;
 						}
 					}
-				});
+					if (object.children) {
+						object.children.forEach((child) => enableShadows(child));
+					}
+				};
+
+				// Call the function to enable shadows for relevant meshes
+				enableShadows(customScene);
 			});
 
 			const controlFolder = gui.addFolder('Controls');
 			controlFolder.add( params, 'envMap', [ 'EXR', 'PNG' ] );
 			controlFolder.add( params, 'exposure', 0, 2, 0.01 );
 			controlFolder.add( params, 'debug', false );
+			gui.add(params, 'animationSpeed', 0.1 , 10).onChange((value) => {
+        // Update the animation speed when the GUI slider changes
+				sceneMixer.timeScale = value;
+			});
 			controlFolder.open();
 
 			// CAMERA
@@ -260,7 +272,7 @@
 					);
 					const directionalLight = new THREE.DirectionalLight(directionalColor, directionalIntensity);
 					directionalLight.castShadow = true;
-					const d = 10;
+					const d = 7;
 
 					directionalLight.shadow.camera.left = - d;
 					directionalLight.shadow.camera.right = d;
@@ -331,15 +343,15 @@
 									// Get the animations
 									const animations = gltf.animations;
 									// Create an animation mixer
-									const mixer = new THREE.AnimationMixer(customScene);
+									sceneMixer = new THREE.AnimationMixer(customScene);
 									// Add animations to the mixer
 									animations.forEach((clip) => {
-										mixer.clipAction(clip).play();
+										sceneMixer.clipAction(clip).play();
 									});
 									// Render the scene
 									const animate = () => {
 										requestAnimationFrame(animate);
-										mixer.update(0.01); // You can adjust the animation speed here
+										sceneMixer.update(0.01); // You can adjust the animation speed here
 										renderer.render(scene, camera);
 									};
 									animate();
