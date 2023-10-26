@@ -50,19 +50,88 @@
 			var characterControls, character;
 			var customScene, sceneMixer;
 			var stats;
+			var renderer;
 			const scene = new THREE.Scene();
 			const clock = new THREE.Clock();
 
 			const keysPressed = {};
+
+			// SHADOW MAP TYPE
+			var shadowMapTypes = {
+				Basic: THREE.BasicShadowMap,
+				PCF: THREE.PCFShadowMap,
+				PCFSoft: THREE.PCFSoftShadowMap,
+				VSM: THREE.VSMShadowMap
+			};
+
+			// Define the available shadow map sizes
+			const shadowMapSizes = [256, 512, 1024, 2048, 4096];
+
+			// Create an object to hold the shadow map size settings
+			const shadowSettings = {
+				mapSize: 1024 // Default size
+			};
+ 
+			// Create an object to store the shadow map type
+			var shadowMapType = {
+				type: 'PCF'  // Set the default type to PCFShadowMap
+			};
+
+			// Create an object to store the ambient light parameters
+			var ambientLight = new THREE.AmbientLight(0xffffff, 1.0)
+			scene.add(ambientLight);
+
+			var directionalLight = new THREE.DirectionalLight(0xffffff, 1); // Color and initial intensity
+			directionalLight.position.set(1, 1, 1); // Initial position (adjust as needed)
+			directionalLight.castShadow = true;
+
+			directionalLight.shadow.camera.left = - 10;
+			directionalLight.shadow.camera.right = 10;
+			directionalLight.shadow.camera.top = 10;
+			directionalLight.shadow.camera.bottom = - 10;
+			directionalLight.shadow.camera.far = 30;
+
+			// Set shadow properties for the light
+			directionalLight.shadow.mapSize.width = shadowSettings.mapSize;
+			directionalLight.shadow.mapSize.height = shadowSettings.mapSize;
+			scene.add(directionalLight);
+
+			const shadowCameraHelper = new THREE.CameraHelper(directionalLight.shadow.camera);
+			scene.add(shadowCameraHelper);
+
+			// Create a sphere geometry to represent the light source position
+			var lightPositionMarkerGeometry = new THREE.SphereGeometry(0.1, 16, 16);
+			var lightPositionMarkerMaterial = new THREE.MeshBasicMaterial({ color: 0xff0000 }); // Red color
+			var lightPositionMarker = new THREE.Mesh(lightPositionMarkerGeometry, lightPositionMarkerMaterial);
+			// Initialize the light position to match the initial directional light position
+			lightPositionMarker.position.copy(directionalLight.position);
+			// Add the marker to the scene
+			scene.add(lightPositionMarker);
+
+			var ambientLightParams = {
+				intensity: ambientLight.intensity,
+				color: ambientLight.color.getHex()
+			};
+
+			// Create an object to store directional light parameters
+			var directionalLightParams = {
+				positionX: directionalLight.position.x,
+				positionY: directionalLight.position.y,
+				positionZ: directionalLight.position.z,
+				intensity: directionalLight.intensity,
+				color: directionalLight.color.getHex(),
+				shadowCamera: 10,
+			};
+
 			// GUI
-			const gui = new GUI();
+			var gui = new GUI();
 			const params = {
 				envMap: 'EXR',
 				exposure: 1.0,
 				debug: false,
 				characterShadow: false,
 				sceneShadow: false,
-				animationSpeed: 1.0
+				animationSpeed: 1.0,
 			};
 
 			// Add the Stats.js widget
@@ -70,6 +139,68 @@
 			stats.showPanel(0); // 0: FPS, 1: MS (milliseconds), 2: MB (megabytes)
 			document.body.appendChild(stats.dom);
 
+			// Create a folder for light controls
+			const lightFolder = gui.addFolder('Light Controls')
+
+			lightFolder.add(ambientLightParams, 'intensity', 0, 20)
+			.name('Ambient Intensity')
+			.onChange(function (value) {
+				// Update the intensity of the ambient light
+				ambientLight.intensity = value;
+			});
+
+			lightFolder.addColor(ambientLightParams, 'color')
+			.name('Ambient Color')
+			.onChange(function (value) {
+				// Update the color of the ambient light
+				ambientLight.color.setHex(value);
+			});
+
+			// Add controllers to adjust light position
+			lightFolder.add(directionalLightParams, 'positionX', -20, 20)
+			.name('Sun Position X')
+			.onChange(function (value) {
+				directionalLight.position.x = value;
+				lightPositionMarker.position.x = value;
+			});
+
+			lightFolder.add(directionalLightParams, 'positionY', -20, 20)
+			.name('Sun Position Y')
+			.onChange(function (value) {
+				directionalLight.position.y = value;
+				lightPositionMarker.position.y = value;
+			});
+
+			lightFolder.add(directionalLightParams, 'positionZ', -20, 20)
+			.name('Sun Position Z')
+			.onChange(function (value) {
+				directionalLight.position.z = value;
+				lightPositionMarker.position.z = value;
+			});
+
+			// Add controllers to adjust intensity and color
+			lightFolder.add(directionalLightParams, 'intensity', 0, 10)
+			.name('Intensity')
+			.onChange(function (value) {
+				directionalLight.intensity = value;
+			});
+
+			lightFolder.addColor(directionalLightParams, 'color')
+			.name('Color')
+			.onChange(function (value) {
+				directionalLight.color.setHex(value);
+			});
+
+			lightFolder.add(directionalLightParams, 'shadowCamera', 1, 50)
+			.name('Shadow Size')
+			.onChange(function (value) {
+				directionalLight.shadow.camera.left = - value;
+				directionalLight.shadow.camera.right = value;
+				directionalLight.shadow.camera.top = value;
+				directionalLight.shadow.camera.bottom = - value;
+				directionalLight.shadow.camera.updateProjectionMatrix();
+				shadowCameraHelper.update()
+			});
 
 			// Create a folder for shadow controls
 			const shadowFolder = gui.addFolder('Shadow Controls');
@@ -81,6 +212,23 @@
 					child.castShadow = value;
 					}
 				});
+			});
+
+			shadowFolder.add(shadowMapType, 'type', Object.keys(shadowMapTypes))
+			.name('Shadow Map Type')
+			.onChange(function (value) {
+				// Update the shadow map type when the dropdown changes
+				renderer.shadowMap.type = shadowMapTypes[value];
+			});
+
+			shadowFolder.add(shadowSettings, 'mapSize', shadowMapSizes)
+			.name('Shadow Map Size')
+			.onChange(function (value) {
+				// Set the shadow map size for both width and height
+				directionalLight.shadow.mapSize.width = value;
+				directionalLight.shadow.mapSize.height = value;
+				directionalLight.shadow.map.dispose(); // important
+				directionalLight.shadow.map = null;
 			});
 
 			// Add a control to toggle shadow casting
@@ -118,7 +266,7 @@
 			camera.position.x = 0;
 
 			// RENDERER
-			const renderer = new THREE.WebGLRenderer({ antialias: true });
+			renderer = new THREE.WebGLRenderer({ antialias: true });
 			renderer.setSize(window.innerWidth, window.innerHeight);
 			renderer.setPixelRatio(window.devicePixelRatio);
 			renderer.shadowMap.enabled = true
@@ -151,7 +299,7 @@
 			envLoader()
 
 			// LIGHT LOADER
-			lightLoader()			
+			//lightLoader()			
 
 			// CHARACTER LOADER
 			characterLoader()
@@ -187,7 +335,6 @@
 			}
 
 			function light() {
-				scene.add(new THREE.AmbientLight(0xffffff, 1.0))
 				//const light = new THREE.DirectionalLight(0xffffff, 1);
 				//light.position.set(0, 20, 0); // Adjust the light position
 				//light.castShadow = true;
@@ -280,14 +427,23 @@
 					);
 					const directionalLight = new THREE.DirectionalLight(directionalColor, directionalIntensity);
 					directionalLight.castShadow = true;
-					const d = 7;
+					const d = 8;
 
 					directionalLight.shadow.camera.left = - d;
 					directionalLight.shadow.camera.right = d;
 					directionalLight.shadow.camera.top = d;
 					directionalLight.shadow.camera.bottom = - d;
 					directionalLight.position.copy(directionalPosition);
+
+					directionalLight.shadow.mapSize.width = 2048*2;
+					directionalLight.shadow.mapSize.height = 2048*2;
+					directionalLight.shadow.camera.near = 0.1;
+					directionalLight.shadow.camera.far = 15;
 					scene.add(directionalLight);
+
+					// Create a CameraHelper for the shadow camera
+					const shadowCameraHelper = new THREE.CameraHelper(directionalLight.shadow.camera);
+					scene.add(shadowCameraHelper);
 
 					// Add point lights
 					const pointLightsData = jsonData["point-lights"];
