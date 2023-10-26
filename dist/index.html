@@ -49,6 +49,7 @@
 			var pngBackground, exrBackground;
 			var characterControls, character;
 			var customScene, sceneMixer;
+			var stats;
 			const scene = new THREE.Scene();
 			const clock = new THREE.Clock();
 
@@ -63,6 +64,11 @@
 				sceneShadow: false,
 				animationSpeed: 1.0
 			};
+
+			// Add the Stats.js widget
+			stats = new Stats();
+			stats.showPanel(0); // 0: FPS, 1: MS (milliseconds), 2: MB (megabytes)
+			document.body.appendChild(stats.dom);
 
 
 			// Create a folder for shadow controls
@@ -176,6 +182,8 @@
 				renderer.render( scene, camera );
 				update()
 				requestAnimationFrame(animate);
+				// Update the Stats.js panel
+				stats.update();
 			}
 
 			function light() {
