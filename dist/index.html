@@ -76,6 +76,9 @@
 			var shadowMapType = {
 				type: 'PCF'  // Set the default type to PCFShadowMap
 			};
+			
+			// Create a variable to track the visibility of the camera helper
+			const cameraHelperVisible = true;
 
 			// Create an object to store the ambient light parameters
 			var ambientLight = new THREE.AmbientLight(0xffffff, 1.0)
@@ -201,6 +204,16 @@
 				directionalLight.shadow.camera.updateProjectionMatrix();
 				shadowCameraHelper.update()
 			});
+
+			// Add a checkbox to show/hide the camera helper
+			lightFolder.add({ ToggleCameraHelper: cameraHelperVisible }, 'ToggleCameraHelper')
+			.name('Camera Helper Visible')
+			.onChange(function (value) {
+				// Set the visibility of the camera helper
+				shadowCameraHelper.visible = value;
+				lightPositionMarker.visible = value;
+			});
+
 
 			// Create a folder for shadow controls
 			const shadowFolder = gui.addFolder('Shadow Controls');
