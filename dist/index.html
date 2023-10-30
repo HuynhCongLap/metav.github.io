@@ -56,6 +56,13 @@
 
 			const keysPressed = {};
 
+			// VIDEO LOADING
+			video = document.createElement('video');
+			video.src = './custom/videos/kiosque_01_.mp4';
+			video.loop = true;
+			video.muted = true;
+			video.play();
+
 			// SHADOW MAP TYPE
 			var shadowMapTypes = {
 				Basic: THREE.BasicShadowMap,
@@ -377,6 +384,7 @@
 
 				}
 				scene.background = background;
+				scene.environment = background;
 				renderer.toneMappingExposure = params.exposure;
 
 			}
@@ -504,6 +512,7 @@
 					// Trim any leading/trailing whitespace from the text file content
 					const glbFileName = data.trim();
 					// Load the GLB model
+					let videoObject = null;
 					const loader_room = new GLTFLoader()
 								.setPath( 'custom/models/' )
 								.setDRACOLoader( new DRACOLoader().setDecoderPath( 'jsm/libs/draco/gltf/' ) )
@@ -514,7 +523,23 @@
 										{
 											object.receiveShadow = true;
 										}
+
+										if (object.name.includes('_video')) {
+											console.log("Find one !!!")
+											videoObject = object;
+										}
 									});
+
+									if (videoObject) {
+										// Add the video as a texture to the material of the found object
+										// Add the video as a texture to the material of the found object
+										const videoTexture = new THREE.VideoTexture(video);
+										videoTexture.minFilter = THREE.LinearFilter;
+										videoTexture.magFilter = THREE.LinearFilter;
+										videoTexture.format = THREE.RGBAFormat; // Set the format to RGBA
+
+										videoObject.material.map = videoTexture;
+									}
 									// Add the model to the scene
 									scene.add(customScene);
 									// Get the animations

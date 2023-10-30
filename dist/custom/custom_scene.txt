@@ -1,1 +1,1 @@
-bag_room_20_with_bags_testshadow.glb
+testVideo.glb
