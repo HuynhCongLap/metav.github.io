@@ -512,7 +512,8 @@
 					// Trim any leading/trailing whitespace from the text file content
 					const glbFileName = data.trim();
 					// Load the GLB model
-					let videoObject = null;
+					// An array to store objects with "_video" in their name
+					const videoObjects = [];
 					const loader_room = new GLTFLoader()
 								.setPath( 'custom/models/' )
 								.setDRACOLoader( new DRACOLoader().setDecoderPath( 'jsm/libs/draco/gltf/' ) )
@@ -526,19 +527,21 @@
 
 										if (object.name.includes('_video')) {
 											console.log("Find one !!!")
-											videoObject = object;
+											videoObjects.push(object);
 										}
 									});
 
-									if (videoObject) {
-										// Add the video as a texture to the material of the found object
-										// Add the video as a texture to the material of the found object
+									if (videoObjects.length > 0) {
+										// Create a video texture from the video element
 										const videoTexture = new THREE.VideoTexture(video);
 										videoTexture.minFilter = THREE.LinearFilter;
 										videoTexture.magFilter = THREE.LinearFilter;
-										videoTexture.format = THREE.RGBAFormat; // Set the format to RGBA
+										videoTexture.format = THREE.RGBAFormat;
 
+										// Assign the video texture to all matching objects
+										videoObjects.forEach((videoObject) => {
 										videoObject.material.map = videoTexture;
+										});
 									}
 									// Add the model to the scene
 									scene.add(customScene);
