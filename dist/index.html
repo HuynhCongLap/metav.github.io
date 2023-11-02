@@ -42,6 +42,8 @@
 			import { Sky } from 'three/addons/objects/Sky.js';
 			import { FlyControls } from 'three/addons/controls/FlyControls.js';
 			import { EXRLoader } from 'three/addons/loaders/EXRLoader.js';
+			import { SAOPass } from 'three/addons/postprocessing/SAOPass.js';
+			THREE.ColorManagement.enabled = false; // TODO: Consider enabling color management.
 
 			var water, video, videoImage, videoImageContext, videoTexture;
 			var exr_file, png_file;
@@ -51,6 +53,8 @@
 			var customScene, sceneMixer;
 			var stats;
 			var renderer;
+			var composer, renderPass, saoPass;
+
 			const scene = new THREE.Scene();
 			const clock = new THREE.Clock();
 
@@ -268,6 +272,7 @@
 				// Call the function to enable shadows for relevant meshes
 				enableShadows(customScene);
 			});
+			
 
 			const controlFolder = gui.addFolder('Controls');
 			controlFolder.add( params, 'envMap', [ 'EXR', 'PNG' ] );
@@ -296,6 +301,36 @@
 			renderer.toneMapping = THREE.ACESFilmicToneMapping;		
 			document.body.appendChild( renderer.domElement );
 
+			composer = new EffectComposer( renderer );
+			renderPass = new RenderPass( scene, camera );
+			composer.addPass( renderPass );
+			saoPass = new SAOPass( scene, camera, false, true );
+			composer.addPass( saoPass );
+
+			const SSAOFolder = gui.addFolder('SSAO');
+				// Init gui
+
+			SSAOFolder.add( saoPass.params, 'output', {
+					'Beauty': SAOPass.OUTPUT.Beauty,
+					'Beauty+SAO': SAOPass.OUTPUT.Default,
+					'SAO': SAOPass.OUTPUT.SAO,
+					'Depth': SAOPass.OUTPUT.Depth,
+					'Normal': SAOPass.OUTPUT.Normal
+				} ).onChange( function ( value ) {
+
+					saoPass.params.output = parseInt( value );
+
+				} );
+			SSAOFolder.add( saoPass.params, 'saoBias', - 1, 1 );
+			SSAOFolder.add( saoPass.params, 'saoIntensity', 0, 1 );
+			SSAOFolder.add( saoPass.params, 'saoScale', 0, 10 );
+			SSAOFolder.add( saoPass.params, 'saoKernelRadius', 1, 100 );
+			SSAOFolder.add( saoPass.params, 'saoMinResolution', 0, 1 );
+			SSAOFolder.add( saoPass.params, 'saoBlur' );
+			SSAOFolder.add( saoPass.params, 'saoBlurRadius', 0, 200 );
+			SSAOFolder.add( saoPass.params, 'saoBlurStdDev', 0.5, 150 );
+			SSAOFolder.add( saoPass.params, 'saoBlurDepthCutoff', 0.0, 0.1 );
+			
 			// CONTROLS
 			const orbitControls = new OrbitControls(camera, renderer.domElement);
 			orbitControls.enableDamping = true
@@ -347,7 +382,8 @@
 				const time = performance.now() * 0.001;
 
 
-				renderer.render( scene, camera );
+				//renderer.render( scene, camera );
+				composer.render(scene, camera);
 				update()
 				requestAnimationFrame(animate);
 				// Update the Stats.js panel
@@ -366,6 +402,7 @@
 				camera.aspect = window.innerWidth / window.innerHeight;
 				camera.updateProjectionMatrix();
 				renderer.setSize(window.innerWidth, window.innerHeight);
+				composer.setSize(window.innerWidth, window.innerHeight);
 				keyDisplayQueue.updatePosition()
 			}
 
@@ -526,7 +563,6 @@
 										}
 
 										if (object.name.includes('_video')) {
-											console.log("Find one !!!")
 											videoObjects.push(object);
 										}
 									});
@@ -557,7 +593,7 @@
 									const animate = () => {
 										requestAnimationFrame(animate);
 										sceneMixer.update(0.01); // You can adjust the animation speed here
-										renderer.render(scene, camera);
+										composer.render(scene, camera);
 									};
 									animate();
 								} );
